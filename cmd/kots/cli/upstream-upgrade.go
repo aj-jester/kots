@@ -35,6 +35,9 @@ func UpstreamUpgradeCmd() *cobra.Command {
 			}
 
 			log := logger.NewLogger()
+
+			log.Error(errors.New("Upstream debug test"))
+
 			log.ActionWithSpinner("Checking for application updates")
 
 			stopCh := make(chan struct{})
@@ -46,17 +49,23 @@ func UpstreamUpgradeCmd() *cobra.Command {
 				return errors.Wrap(err, "failed to get clientset")
 			}
 
+			log.Error(errors.New("We Get client set"))
+
 			podName, err := k8sutil.FindKotsadm(clientset, v.GetString("namespace"))
 			if err != nil {
 				log.FinishSpinnerWithError()
 				return errors.Wrap(err, "failed to find kotsadm pod")
 			}
 
+			log.Error(errors.Errorf("Found kotsadm %s", podName))
+
 			localPort, errChan, err := k8sutil.PortForward(kubernetesConfigFlags, 0, 3000, v.GetString("namespace"), podName, false, stopCh, log)
 			if err != nil {
 				log.FinishSpinnerWithError()
 				return errors.Wrap(err, "failed to start port forwarding")
 			}
+
+			log.Error(errors.New("We set the port forwarding"))
 
 			go func() {
 				select {
@@ -74,6 +83,8 @@ func UpstreamUpgradeCmd() *cobra.Command {
 				updateCheckURI = fmt.Sprintf("%s?deploy=true", updateCheckURI)
 			}
 
+			log.Error(errors.Errorf("We are checking for update %s", updateCheckURI))
+
 			authSlug, err := auth.GetOrCreateAuthSlug(kubernetesConfigFlags, v.GetString("namespace"))
 			if err != nil {
 				log.FinishSpinnerWithError()
@@ -83,6 +94,8 @@ func UpstreamUpgradeCmd() *cobra.Command {
 				}
 				os.Exit(2) // not returning error here as we don't want to show the entire stack trace to normal users
 			}
+
+			log.Error(errors.Errorf("Getting or creating auth slug %s", authSlug))
 
 			newReq, err := http.NewRequest("POST", updateCheckURI, strings.NewReader("{}"))
 			if err != nil {
@@ -103,6 +116,8 @@ func UpstreamUpgradeCmd() *cobra.Command {
 				return errors.Errorf("The application %s was not found in the cluster in the specified namespace", args[0])
 			} else if resp.StatusCode != 200 {
 				log.FinishSpinnerWithError()
+
+				log.Error(errors.Errorf("Resp body: %d %v", resp.StatusCode, resp.Body))
 				return errors.Errorf("Unexpected response from the API: %d", resp.StatusCode)
 			}
 
